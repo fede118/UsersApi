@@ -18,17 +18,30 @@ public class UsersApi {
         post("/login", (req, res) -> {
             res.type("application/json");
 
-            User user = new Gson().fromJson(req.body(), User.class);
-            
-            String token = elasticSearchService.getUserToken(user.getUsername(), user.getPassword());
+            if (req.body().isEmpty() || req.body() == null) {
+                return "please provide username and password";
 
-            System.out.println("TOKKEEEN BACK FROM ELASTIC> " + token);
+            } else {
+                User user = new Gson().fromJson(req.body(), User.class);
 
-            return new Gson().toJsonTree(token);
+                String token = elasticSearchService.getUserToken(user.getUsername(), user.getPassword());
+                TokenResponse tokenResponse = new TokenResponse(user.getUsername(), token);
+
+                System.out.println("TOKKEEEN BACK FROM ELASTIC: " + tokenResponse.getToken());
+
+                res.status(200);
+                return new Gson().toJsonTree(tokenResponse);
+            }
         });
 
         get("/sites", (req, res) -> {
             res.type("application/json");
+
+            if (req.queryParams("username").isEmpty() || req.queryParams("username") == null) {
+                return new Gson().toJson("please provide username");
+            } else if (req.queryParams("password").isEmpty() || req.queryParams("password") == null) {
+                return new Gson().toJson("please provide password");
+            }
 
             String username = req.queryParams("username");
             String token = req.queryParams("token");

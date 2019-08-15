@@ -15,10 +15,10 @@ import java.util.List;
 
 public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
 
+//    crear usuario String uniqueID = UUID.randomUUID().toString();
 
     @Override
     public String getUserToken(String username, String password) {
-
         RestHighLevelClient client = CreateElasticSearchConnection.makeConnection();
 
         SearchRequest searchRequest = new SearchRequest("users");
@@ -27,34 +27,41 @@ public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
         searchRequest.source(searchSourceBuilder);
 
         try {
-
             SearchResponse response = client.search(searchRequest,RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
             SearchHit[] searchHits = hits.getHits();
 
-            User user = new Gson().fromJson( searchHits[0].getSourceAsString(), User.class);
+            if (searchHits.length < 1) {
+                return "not found 404";
+            }
 
-//            List<Site> sites = new ArrayList<>() ;
-//            for (SearchHit hit : searchHits) {
-//                sites.add(new Gson().fromJson( hit.getSourceAsString(), Site.class));
-//            }
+            User user = new Gson().fromJson(searchHits[0].getSourceAsString(), User.class);
 
-            System.out.println(user.getPassword());
-
-            return user.getToken();
+            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+                System.out.println("Authentification: SUCCEDED");
+                return user.getToken();
+            } else {
+                System.out.println("wrong password or user not found");
+                // throw exception 404 or forbidden
+                return "wrong password or user not found";
+            }
 
 
         } catch(ElasticsearchException e) {
             System.out.println(e.getMessage());
+            e.printStackTrace();
         } catch (java.io.IOException ex){
             System.out.println(ex.getMessage());
+            ex.printStackTrace();
         }
 
         try {
             CreateElasticSearchConnection.closeConnection(client);
         } catch (IOException e) {
             System.out.println(e.getMessage());;
+            e.printStackTrace();
         }
         return null;
     }
+
 }
