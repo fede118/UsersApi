@@ -19,6 +19,31 @@ public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
 
     @Override
     public String getUserToken(String username, String password) {
+
+        User user = getUserFromElasticSearch(username);
+
+        if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+            System.out.println("Authentification: SUCCEDED");
+            return user.getToken();
+        } else {
+            System.out.println("wrong password or user not found");
+            // throw exception 404 or forbidden
+            return "wrong password or user not found";
+        }
+
+    }
+
+    @Override
+    public boolean checkIfValidToken(String username, String token) {
+        User user =getUserFromElasticSearch(username);
+        if (user.getUsername().equals(username) && user.getToken().equals(token)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private User getUserFromElasticSearch(String username) {
         RestHighLevelClient client = CreateElasticSearchConnection.makeConnection();
 
         SearchRequest searchRequest = new SearchRequest("users");
@@ -27,32 +52,22 @@ public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
         searchRequest.source(searchSourceBuilder);
 
         try {
-            SearchResponse response = client.search(searchRequest,RequestOptions.DEFAULT);
+            SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
             SearchHit[] searchHits = hits.getHits();
 
             if (searchHits.length < 1) {
-                return "not found 404";
-            }
-
-            User user = new Gson().fromJson(searchHits[0].getSourceAsString(), User.class);
-
-            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
-                System.out.println("Authentification: SUCCEDED");
-                return user.getToken();
+                return null;
             } else {
-                System.out.println("wrong password or user not found");
-                // throw exception 404 or forbidden
-                return "wrong password or user not found";
+                return new Gson().fromJson(searchHits[0].getSourceAsString(), User.class);
             }
 
-
-        } catch(ElasticsearchException e) {
+        } catch (ElasticsearchException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
-        } catch (java.io.IOException ex){
-            System.out.println(ex.getMessage());
-            ex.printStackTrace();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
 
         try {
@@ -61,6 +76,7 @@ public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
             System.out.println(e.getMessage());;
             e.printStackTrace();
         }
+
         return null;
     }
 

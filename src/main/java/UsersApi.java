@@ -5,13 +5,10 @@ import static spark.Spark.*;
 
 public class UsersApi {
 
-    final IUserService service = new UserServiceSitesApiImpl();
+    static final IUserService service = new UserServiceSitesApiImpl();
+    static final IServiceElasticSearch elasticSearchService = new UserServiceElasticSearchImpl();;
 
     public static void main(String[] args) {
-
-        final IUserService service = new UserServiceSitesApiImpl();
-
-        final IServiceElasticSearch elasticSearchService = new UserServiceElasticSearchImpl();
 
         Spark.port(8080);
 
@@ -19,6 +16,7 @@ public class UsersApi {
             res.type("application/json");
 
             if (req.body().isEmpty() || req.body() == null) {
+                res.status(403);
                 return "please provide username and password";
 
             } else {
@@ -27,7 +25,7 @@ public class UsersApi {
                 String token = elasticSearchService.getUserToken(user.getUsername(), user.getPassword());
                 TokenResponse tokenResponse = new TokenResponse(user.getUsername(), token);
 
-                System.out.println("TOKKEEEN BACK FROM ELASTIC: " + tokenResponse.getToken());
+                System.out.println("[POST] /login: " + tokenResponse.getToken());
 
                 res.status(200);
                 return new Gson().toJsonTree(tokenResponse);
@@ -37,35 +35,43 @@ public class UsersApi {
         get("/sites", (req, res) -> {
             res.type("application/json");
 
-            if (req.queryParams("username").isEmpty() || req.queryParams("username") == null) {
-                return new Gson().toJson("please provide username");
-            } else if (req.queryParams("password").isEmpty() || req.queryParams("password") == null) {
-                return new Gson().toJson("please provide password");
+            if (validateToken(req.queryParams("username"), req.queryParams("token"))) {
+                Site[] sites = service.getSites();
+                res.status(200);
+                return new Gson().toJsonTree(sites);
+            } else {
+                res.status(403);
+                return new Gson().toJson("invalid username or token");
             }
-
-            String username = req.queryParams("username");
-            String token = req.queryParams("token");
-
-            System.out.println("username from params: " + username);
-            System.out.println("token from params: " + token);
-
-            Site[] sites = service.getSites();
-            res.status(200);
-            return new Gson().toJsonTree(sites);
         });
 
         get("/sites/:id/categories", (req, res) -> {
             res.type("application/json");
 
-            String id = req.params("id");
+            System.out.println("[GET] /sites/:id/categories => " + req.params("id") +
+                    req.queryParams("token") + req.queryParams("username"));
 
-            String token = req.queryParams("token");
-            System.out.println("TOKEN: " + token);
+            if (validateToken(req.queryParams("username"), req.queryParams("token"))) {
+                String id = req.params("id");
+                System.out.println("[GET] /sites/:id/categories =>" + id);
 
-            Category[] categories = service.getCategories(id);
-            res.status(200);
-            return new Gson().toJsonTree(categories);
+                Category[] categories = service.getCategories(id);
+                res.status(200);
+                return new Gson().toJsonTree(categories);
+            } else {
+                res.status(403);
+                return new Gson().toJson("invalid username or token");
+            }
+
         });
+    }
 
+    private static boolean validateToken(String username, String token) {
+        if (username.isEmpty() || username == null) {
+            return false;
+        } else if (token.isEmpty() || token == null) {
+            return false;
+        }
+        return elasticSearchService.checkIfValidToken(username, token);
     }
 }

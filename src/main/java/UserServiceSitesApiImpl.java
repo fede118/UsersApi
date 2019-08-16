@@ -32,6 +32,8 @@ public class UserServiceSitesApiImpl implements IUserService {
         Gson gson = new Gson();
         Category[] categories = gson.fromJson(in, Category[].class);
 
+        System.out.println("[userService] getCategories = " + categories[0].toString());
+
         return categories;
     }
 
