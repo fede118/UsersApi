@@ -10,8 +10,6 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
 
@@ -35,8 +33,9 @@ public class UserServiceElasticSearchImpl implements IServiceElasticSearch {
 
     @Override
     public boolean checkIfValidToken(String username, String token) {
-        User user =getUserFromElasticSearch(username);
-        if (user.getUsername().equals(username) && user.getToken().equals(token)) {
+        User user = getUserFromElasticSearch(username);
+
+        if (user != null && user.getUsername().equals(username) && user.getToken().equals(token)) {
             return true;
         } else {
             return false;

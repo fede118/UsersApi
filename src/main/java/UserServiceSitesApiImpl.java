@@ -1,12 +1,14 @@
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.FileSystemNotFoundException;
 
 public class UserServiceSitesApiImpl implements IUserService {
     private static final String SITES_URL = "http://localhost:8083/sites";
@@ -27,14 +29,22 @@ public class UserServiceSitesApiImpl implements IUserService {
     }
 
     public Category[] getCategories(String id) {
-        BufferedReader in = getBufferedReader(CATEGORIES_URL + id + "/categories");
+        try {
+            BufferedReader in = getBufferedReader(CATEGORIES_URL + id + "/categories");
 
-        Gson gson = new Gson();
-        Category[] categories = gson.fromJson(in, Category[].class);
+            Gson gson = new Gson();
+            if (in != null) {
+                Category[] categories = gson.fromJson(in, Category[].class);
+                System.out.println("[userService] getCategories = " + categories[0].toString());
+                return categories;
+            } else {
+                return new Category[0];
+            }
 
-        System.out.println("[userService] getCategories = " + categories[0].toString());
-
-        return categories;
+        } catch (Exception exception) {
+            System.out.println(exception.getMessage());
+            return new Category[0];
+        }
     }
 
     private static BufferedReader getBufferedReader(String url) {

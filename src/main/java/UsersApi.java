@@ -23,6 +23,7 @@ public class UsersApi {
                 User user = new Gson().fromJson(req.body(), User.class);
 
                 String token = elasticSearchService.getUserToken(user.getUsername(), user.getPassword());
+
                 TokenResponse tokenResponse = new TokenResponse(user.getUsername(), token);
 
                 System.out.println("[POST] /login: " + tokenResponse.getToken());
@@ -48,16 +49,19 @@ public class UsersApi {
         get("/sites/:id/categories", (req, res) -> {
             res.type("application/json");
 
-            System.out.println("[GET] /sites/:id/categories => " + req.params("id") +
-                    req.queryParams("token") + req.queryParams("username"));
-
             if (validateToken(req.queryParams("username"), req.queryParams("token"))) {
                 String id = req.params("id");
-                System.out.println("[GET] /sites/:id/categories =>" + id);
+//                System.out.println("[GET] /sites/:id/categories =>" + id);
 
                 Category[] categories = service.getCategories(id);
-                res.status(200);
-                return new Gson().toJsonTree(categories);
+                if (categories.length > 0) {
+                    res.status(200);
+                    return new Gson().toJsonTree(categories);
+                } else {
+                    res.status(404);
+                    return new Gson().toJson("Couldnt find categories for that site/Id");
+                }
+
             } else {
                 res.status(403);
                 return new Gson().toJson("invalid username or token");
@@ -71,7 +75,8 @@ public class UsersApi {
             return false;
         } else if (token.isEmpty() || token == null) {
             return false;
+        } else {
+            return elasticSearchService.checkIfValidToken(username, token);
         }
-        return elasticSearchService.checkIfValidToken(username, token);
     }
 }
