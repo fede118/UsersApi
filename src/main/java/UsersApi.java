@@ -10,9 +10,28 @@ public class UsersApi {
 
     public static void main(String[] args) {
 
-        Spark.port(8080);
+        Spark.port(8084);
 
-        post("/login", (req, res) -> {
+        post("/users", (req, res) -> {
+            res.type("application/json");
+
+            if (req.body().isEmpty() || req.body() == null) {
+                res.status(403);
+                return "please provide username and password";
+            } else {
+                User user = new Gson().fromJson(req.body(), User.class);
+                if (elasticSearchService.saveUser(user)) {
+                    res.status(201);
+                    return true;
+                }
+
+                res.status(500);
+                return false;
+
+            }
+        });
+
+        post("/users/login", (req, res) -> {
             res.type("application/json");
 
             if (req.body().isEmpty() || req.body() == null) {
@@ -33,7 +52,7 @@ public class UsersApi {
             }
         });
 
-        get("/sites", (req, res) -> {
+        get("/users/sites", (req, res) -> {
             res.type("application/json");
 
             if (validateToken(req.queryParams("username"), req.queryParams("token"))) {
@@ -46,7 +65,7 @@ public class UsersApi {
             }
         });
 
-        get("/sites/:id/categories", (req, res) -> {
+        get("/users/sites/:id/categories", (req, res) -> {
             res.type("application/json");
 
             if (validateToken(req.queryParams("username"), req.queryParams("token"))) {
@@ -59,7 +78,7 @@ public class UsersApi {
                     return new Gson().toJsonTree(categories);
                 } else {
                     res.status(404);
-                    return new Gson().toJson("Couldnt find categories for that site/Id");
+                    return new Gson().toJson("Couldn't find categories for that site/Id");
                 }
 
             } else {
